@@ -1,8 +1,14 @@
-from datasets import load_dataset
+import sys
+from pathlib import Path
 import argparse
 
+sys.path.append(str(Path(__file__).parent.parent / "src"))
 
-def cli():
+from datasets import load_dataset
+from src.data.preprocessing import prepare_dataset_crf_format
+
+
+def cli() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-s", "--split",
@@ -15,14 +21,14 @@ def cli():
     return args
 
 
-def data_inspection(args):
+def data_inspection(args : argparse.Namespace):
     ds = load_dataset("conll2003")
 
     print("=" * 60)
     print("HUGGINGFACE DATASET INFO")
     print("=" * 60)
     print(ds)
-
+    print(type(ds))
     print("\nColumn names:")
     print(ds[args.split].column_names)
 
@@ -51,20 +57,7 @@ def data_inspection(args):
     print("MY REFORMATTED FORMAT (CRF-FRIENDLY)")
     print("=" * 60)
 
-    X = []
-    y = []
-    for i in range(ds[args.split].num_rows):
-        sentence_x = []
-        sentence_y = []
-        for j in range(len(ds[args.split][i]['tokens'])):
-            sentence_x.append({
-                'word': ds[args.split][i]['tokens'][j],
-                'pos': pos_labels[ds[args.split][i]['pos_tags'][j]],
-                'chunk': chunk_labels[ds[args.split][i]['chunk_tags'][j]],
-            })
-            sentence_y.append(ner_labels[ds[args.split][i]['ner_tags'][j]])
-        y.append(sentence_y)
-        X.append(sentence_x)
+    X, y = prepare_dataset_crf_format(ds, args.split)
 
     print("First 3 samples in MY FORMAT:")
     for i in range(3):
