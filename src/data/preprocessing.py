@@ -1,9 +1,9 @@
-from src.utils.constants import _SHAPE_RE, SPLIT
+from src.utils.constants import SHAPE_RE, SPLIT
 from datasets.dataset_dict import DatasetDict
 import time
 
 def _word_shape(word: str) -> str:
-    return _SHAPE_RE.sub(
+    return SHAPE_RE.sub(
         lambda m: 'A' if m.group().isupper() else ('a' if m.group().islower() else '0'),
         word
     )
