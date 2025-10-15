@@ -2,8 +2,8 @@ from sklearn_crfsuite import CRF
 from seqeval.metrics import classification_report, f1_score
 from datasets import load_dataset
 from src.data.preprocessing import hf_to_crf
+from config import CRF_PARAMS
 
-# --- ADD: determinism
 import random, numpy as np
 random.seed(42); np.random.seed(42)
 
@@ -54,14 +54,7 @@ def main():
     X_tr_full = X_train + X_val
     y_tr_full = y_train + y_val
 
-    final_model = CRF(
-        algorithm="lbfgs",
-        c1=0.01,
-        c2=0.1,
-        max_iterations=200,
-        all_possible_transitions=True,
-        min_freq=1           # --- ADD
-    )
+    final_model = CRF(**CRF_PARAMS)
     final_model.fit(X_tr_full, y_tr_full)
     print("Final model training completed.")
 
