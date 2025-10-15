@@ -1,0 +1,4 @@
+sklearn-crfsuite
+datasets
+joblib
+numpy
