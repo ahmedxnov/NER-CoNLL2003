@@ -26,36 +26,65 @@ def _len_bin(n: int) -> str:
 def word2features(HF_sentence : dict, j : int, pos_labels : list[str], chunk_labels : list[str]) -> dict:
     word = HF_sentence['tokens'][j]
     features = {
-        # word-level features
         'bias': 1.0,
         'word.lower()': word.lower(),
-        'word.isupper()': word.isupper(),
-        'word.istitle()': word.istitle(), # is the word titlecased(starts with a capital letter)?
-        'word.isdigit()': word.isdigit(), # is the word all digits?
-        'word.isalpha()': word.isalpha(), # is the word all alphabetic?
-        'word.isalnum()': word.isalnum(), # is the word all alphanumeric(mix of alphabet and numbers only)?
-        'has_quote': "'" in word or "’" in word, 
-        'has_hyphen': '-' in word,
+        'word[-3:]': word[-3:], # England -> and
+        'word[-2:]': word[-2:], # Germany -> ny
+        'word.isupper()': word.isupper(), # is it AAAA
+        'word.istitle()': word.istitle(), # is it Aaaa
+        'word.isdigit()': word.isdigit(), # is it 1234
         'word_has_dot': '.' in word,
-        'word_shape': _word_shape(word), # shape of the word ("Xxxx", "xxxx", "XxXx", "d", "dd", etc...)
-        'word_shape_compact': _word_shape_compact(word), # compacted shape of the word (e.g., "Xx", "x", "XxXx", "d", "d", etc.)
-        'word_len_bin': _len_bin(len(word)), # create ranges of lengths for the word
-        'postag': pos_labels[HF_sentence['pos_tags'][j]], # part-of-speech tag of the word
-        'chunktag': chunk_labels[HF_sentence['chunk_tags'][j]], # syntactic chunk tag of the word
-        
-        # Morphological Features (substrings)
-        'prefix_2': word[:2], # first two characters of the word
-        'prefix_3': word[:3], # first three characters of the word
-        'suffix_2': word[-2:], # last two characters of the word
-        'suffix_3': word[-3:], # last three characters of the word
-        
-        # Contextual Features (Neighbor Tokens)
-        'prev_word_pos': pos_labels[HF_sentence['pos_tags'][j-1]] if j > 0 else 'BOS_POS',
-        'next_word_pos': pos_labels[HF_sentence['pos_tags'][j+1]] if j != len(HF_sentence['tokens']) - 1 else 'EOS_POS',
-        'prev_word_chunk': chunk_labels[HF_sentence['chunk_tags'][j-1]] if j > 0 else 'BOS_CHUNK',
-        'next_word_chunk': chunk_labels[HF_sentence['chunk_tags'][j+1]] if j != len(HF_sentence['tokens']) - 1 else 'EOS_CHUNK'
+        'word_has_hyphen': '-' in word,
+        'word.isalpha()': word.isalpha(),
+        'word.isalnum()': word.isalnum(),
+        'postag': pos_labels[HF_sentence['pos_tags'][j]], # NNP
+        'postag[:2]': pos_labels[HF_sentence['pos_tags'][j]][:2], # NN
+        'chunktag': chunk_labels[HF_sentence['chunk_tags'][j]], # B-NP
+        'word.shape()': _word_shape(word),
+        'word.shape().compact()': _word_shape_compact(word),
+        'word.len_bin()': _len_bin(len(word)),
     }
+    if j > 0:
+        prev_word = HF_sentence['tokens'][j - 1]
+        features.update({
+            'prev_word.lower()': prev_word.lower(),
+            'prev_word[-3:]': prev_word[-3:], # England -> and
+            'prev_word[-2:]': prev_word[-2:], # Germany -> ny
+            'prev_word.istitle()': prev_word.istitle(),
+            'prev_word.isupper()': prev_word.isupper(),
+            'prev_word.isdigit()': prev_word.isdigit(),
+            'pos_tag[prev_word]': pos_labels[HF_sentence['pos_tags'][j - 1]], # NNP
+            'pos_tag[prev_word][:2]': pos_labels[HF_sentence['pos_tags'][j - 1]][:2], # NN
+            'chunktag[prev_word]': chunk_labels[HF_sentence['chunk_tags'][j - 1]], # B-NP
+            'word.shape()[prev_word]': _word_shape(prev_word),
+            'word.shape().compact()[prev_word]': _word_shape_compact(prev_word),
+            'word.len_bin()[prev_word]': _len_bin(len(prev_word)),
+        })
+    else:
+        features['BOS'] = True
+        
+    
+    if j < len(HF_sentence['tokens']) - 1:
+        next_word = HF_sentence['tokens'][j + 1]
+        features.update({
+            'next_word.lower()': next_word.lower(),
+            'next_word[-3:]': next_word[-3:], # England -> and
+            'next_word[-2:]': next_word[-2:], # Germany -> ny
+            'next_word.istitle()': next_word.istitle(),
+            'next_word.isupper()': next_word.isupper(),
+            'next_word.isdigit()': next_word.isdigit(),
+            'pos_tag[next_word]': pos_labels[HF_sentence['pos_tags'][j + 1]], # NNP
+            'pos_tag[next_word][:2]': pos_labels[HF_sentence['pos_tags'][j + 1]][:2], # NN
+            'chunktag[next_word]': chunk_labels[HF_sentence['chunk_tags'][j + 1]], # B-NP
+            'word.shape()[next_word]': _word_shape(next_word),
+            'word.shape().compact()[next_word]': _word_shape_compact(next_word),
+            'word.len_bin()[next_word]': _len_bin(len(next_word)),
+        })
+    else:
+        features['EOS'] = True
+    
     return features
+
 
 def process_sentence_chunk_optimized(sentences : list[dict], pos_labels : list[str], chunk_labels : list[str], ner_labels : list[str]) -> tuple[list[list[dict]], list[list[str]]]:
     chunk_X = list()
@@ -100,7 +129,7 @@ def prepare_dataset_crf_format(ds: DatasetDict, split: str, pos_labels: list[str
     return X, y
 
 
-def preprocess(ds : DatasetDict):
+def hf_to_crf(ds : DatasetDict):
     # Extract labels once (they're constant across all splits)
     pos_labels = ds["train"].features["pos_tags"].feature.names
     chunk_labels = ds["train"].features["chunk_tags"].feature.names
@@ -116,8 +145,7 @@ def preprocess(ds : DatasetDict):
         items[split] = (X, y)
         
         elapsed = time.time() - start_time
-        print(f"Completed {split} in {elapsed:.2f} seconds")
+        print(f"Completed {split} preprocessing in {elapsed:.2f} seconds")
     
     print("\nAll splits processed successfully!")
     return items
-
