@@ -58,21 +58,46 @@ def word2features(HF_sentence : dict, j : int, pos_labels : list[str], chunk_lab
     }
     return features
 
-def prepare_dataset_crf_format(ds : DatasetDict, split : str) -> tuple[list[list[dict]], list[list[str]]]:
-    X = list()
-    y = list()
-    pos_labels = ds[split].features["pos_tags"].feature.names
-    chunk_labels = ds[split].features["chunk_tags"].feature.names
-    ner_labels = ds[split].features["ner_tags"].feature.names
+def process_sentence_chunk_optimized(sentences : list[dict], pos_labels : list[str], chunk_labels : list[str], ner_labels : list[str]) -> tuple[list[list[dict]], list[list[str]]]:
+    chunk_X = list()
+    chunk_y = list()
     
-    for i in range(ds[split].num_rows):
+    for sentence in sentences:
         sentence_x = list()
         sentence_y = list()
-        for j in range(len(ds[split][i]['tokens'])):
-            sentence_x.append(word2features(ds[split][i], j, pos_labels, chunk_labels))
-            sentence_y.append(ner_labels[ds[split][i]['ner_tags'][j]])
-        X.append(sentence_x)
-        y.append(sentence_y)
+        for j in range(len(sentence['tokens'])):
+            sentence_x.append(word2features(sentence, j, pos_labels, chunk_labels))
+            sentence_y.append(ner_labels[sentence['ner_tags'][j]])
+        chunk_X.append(sentence_x)
+        chunk_y.append(sentence_y)
+    
+    return chunk_X, chunk_y
+
+def prepare_dataset_crf_format(ds: DatasetDict, split: str, pos_labels: list[str], chunk_labels: list[str], ner_labels: list[str]) -> tuple[list[list[dict]], list[list[str]]]:
+    from multiprocessing import Pool, cpu_count
+    from functools import partial
+    from src.utils.helpers import create_chunks
+    
+    sentences = [ds[split][i] for i in range(ds[split].num_rows)]
+    chunks = create_chunks(sentences, cpu_count())
+    
+    # fixating all values since pool only expects chunks
+    process_chunk_with_labels = partial(
+        process_sentence_chunk_optimized, 
+        pos_labels=pos_labels, 
+        chunk_labels=chunk_labels, 
+        ner_labels=ner_labels
+    )
+    
+    with Pool() as pool:
+        results = pool.map(process_chunk_with_labels, chunks)
+    
+    X = list()
+    y = list()
+    for chunk_X, chunk_y in results:
+        X.extend(chunk_X)
+        y.extend(chunk_y)
+    
     return X, y
 
 def save_dataset_crf_format(X : list[list[dict]], y : list[list[str]], split : str):

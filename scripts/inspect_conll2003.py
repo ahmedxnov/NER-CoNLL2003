@@ -51,7 +51,7 @@ def data_inspection(args : argparse.Namespace):
     print("MY REFORMATTED FORMAT (CRF-FRIENDLY)")
     print("=" * 60)
 
-    X, y = prepare_dataset_crf_format(ds, args.split)
+    X, y = prepare_dataset_crf_format(ds, args.split, pos_labels, chunk_labels, ner_labels)
 
     print("First 3 samples in MY FORMAT:")
     for i in range(3):
