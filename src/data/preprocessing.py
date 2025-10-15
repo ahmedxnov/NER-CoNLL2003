@@ -1,7 +1,6 @@
-import joblib
-from src.utils.constants import _SHAPE_RE, ROOT_DIR
+from src.utils.constants import _SHAPE_RE, SPLIT
 from datasets.dataset_dict import DatasetDict
-
+import time
 
 def _word_shape(word: str) -> str:
     return _SHAPE_RE.sub(
@@ -100,11 +99,25 @@ def prepare_dataset_crf_format(ds: DatasetDict, split: str, pos_labels: list[str
     
     return X, y
 
-def save_dataset_crf_format(X : list[list[dict]], y : list[list[str]], split : str):
-    out_dir = ROOT_DIR / "data"
-    out_dir.mkdir(parents=True, exist_ok=True)
 
-    file_path = out_dir / f"conll2003_{split}_crf_format.pkl"
+def preprocess(ds : DatasetDict):
+    # Extract labels once (they're constant across all splits)
+    pos_labels = ds["train"].features["pos_tags"].feature.names
+    chunk_labels = ds["train"].features["chunk_tags"].feature.names
+    ner_labels = ds["train"].features["ner_tags"].feature.names
+    
+    items = dict()
+    for split in SPLIT:
+        print(f"\nProcessing {split} split ({ds[split].num_rows} sentences)...")
+        start_time = time.time()
+        
+        # Use the parallelized prepare function with pre-extracted labels
+        X, y = prepare_dataset_crf_format(ds, split, pos_labels, chunk_labels, ner_labels)
+        items[split] = (X, y)
+        
+        elapsed = time.time() - start_time
+        print(f"Completed {split} in {elapsed:.2f} seconds")
+    
+    print("\nAll splits processed successfully!")
+    return items
 
-    joblib.dump((X, y), file_path)
-    print(f"Saved {split} set in CRF-friendly format to: {file_path.resolve()}")
