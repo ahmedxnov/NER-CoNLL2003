@@ -1,15 +1,11 @@
-from pathlib import Path
-import sys
-
-sys.path.append(str(Path(__file__).parent.parent / "src"))
-
-from datasets import load_dataset
+from src.data.loaders import load_huggingface_dataset
 from src.data.preprocessing import prepare_dataset_crf_format, save_dataset_crf_format
+from src.utils.constants import SPLIT
 
 def main():
-    ds = load_dataset("conll2003")
+    ds = load_huggingface_dataset()
     
-    for split in ["train", "validation", "test"]:
+    for split in SPLIT:
         X, y = prepare_dataset_crf_format(ds, split)
         save_dataset_crf_format(X, y, split)
 

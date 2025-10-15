@@ -1,6 +1,7 @@
 import joblib
-from pathlib import Path
-from src.utils.constants import _SHAPE_RE    
+from src.utils.constants import _SHAPE_RE, ROOT_DIR
+from datasets.dataset_dict import DatasetDict
+
 
 def _word_shape(word: str) -> str:
     return _SHAPE_RE.sub(
@@ -8,8 +9,8 @@ def _word_shape(word: str) -> str:
         word
     )
 
-def _word_shape_compact(w: str) -> str:
-    s = _word_shape(w)
+def _word_shape_compact(word: str) -> str:
+    s = _word_shape(word)
     out = list()
     for ch in s:
         if not out or out[-1] != ch:
@@ -57,7 +58,7 @@ def word2features(HF_sentence : dict, j : int, pos_labels : list[str], chunk_lab
     }
     return features
 
-def prepare_dataset_crf_format(ds, split):
+def prepare_dataset_crf_format(ds : DatasetDict, split : str) -> tuple[list[list[dict]], list[list[str]]]:
     X = list()
     y = list()
     pos_labels = ds[split].features["pos_tags"].feature.names
@@ -74,8 +75,8 @@ def prepare_dataset_crf_format(ds, split):
         y.append(sentence_y)
     return X, y
 
-def save_dataset_crf_format(X, y, split):
-    out_dir = Path("data")
+def save_dataset_crf_format(X : list[list[dict]], y : list[list[str]], split : str):
+    out_dir = ROOT_DIR / "data"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     file_path = out_dir / f"conll2003_{split}_crf_format.pkl"

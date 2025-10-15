@@ -1,12 +1,6 @@
-import sys
-from pathlib import Path
 import argparse
-
-sys.path.append(str(Path(__file__).parent.parent / "src"))
-
-from datasets import load_dataset
+from src.data.loaders import load_huggingface_dataset
 from src.data.preprocessing import prepare_dataset_crf_format
-
 
 def cli() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -22,7 +16,7 @@ def cli() -> argparse.Namespace:
 
 
 def data_inspection(args : argparse.Namespace):
-    ds = load_dataset("conll2003")
+    ds = load_huggingface_dataset()
 
     print("=" * 60)
     print("HUGGINGFACE DATASET INFO")
