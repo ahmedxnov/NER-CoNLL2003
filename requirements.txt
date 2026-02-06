@@ -1,4 +1,7 @@
-sklearn-crfsuite
-datasets
-joblib
-numpy
+sklearn-crfsuite==0.5.0
+datasets==2.19.2
+joblib==1.5.3
+numpy==2.2.6
+seqeval==1.2.2
+nltk==3.9.1
+streamlit==1.41.1
