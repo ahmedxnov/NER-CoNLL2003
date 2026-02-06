@@ -2,14 +2,15 @@ from sklearn_crfsuite import CRF
 from seqeval.metrics import classification_report, f1_score
 from datasets import load_dataset
 from src.data.preprocessing import hf_to_crf
+from src.utils.constants import ROOT_DIR
 from config import CRF_PARAMS
 
-import random, numpy as np
+import random, numpy as np, joblib
 random.seed(42); np.random.seed(42)
 
 def main():
     print("\nLoading dataset...")
-    ds = load_dataset("conll2003")
+    ds = load_dataset("conll2003", trust_remote_code=True)
 
     items = hf_to_crf(ds)
     X_train, y_train = items["train"]
@@ -66,6 +67,13 @@ def main():
 
     f1 = f1_score(y_test, y_test_pred)
     print(f"\nOverall Test F1: {f1:.4f}")
+
+    # Save trained model
+    model_dir = ROOT_DIR / "models"
+    model_dir.mkdir(parents=True, exist_ok=True)
+    model_path = model_dir / "crf_model.pkl"
+    joblib.dump(final_model, model_path)
+    print(f"\nModel saved to: {model_path.resolve()}")
 
 if __name__ == "__main__":
     main()
